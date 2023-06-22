@@ -1,7 +1,6 @@
 from functools import partial
 from typing import Mapping
 
-from indexed import IndexedOrderedDict
 from gi.repository import Gio, GLib, Gtk, Gdk
 
 
