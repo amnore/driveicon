@@ -1,4 +1,5 @@
 from functools import partial
+from gi.repository import GObject
 from typing import Mapping
 
 from gi.repository import Gio, GLib, Gtk, Gdk
@@ -29,8 +30,10 @@ def _create_item(
     return item
 
 
-class MountMenu:
+class MountMenu(GObject.Object):
     def __init__(self, application: Gtk.Application):
+        super().__init__()
+
         self.__volume_monitor: Gio.VolumeMonitor = Gio.VolumeMonitor.get()
         self.__action_group = Gio.SimpleActionGroup()
         self.__menu = Gio.Menu()
@@ -77,6 +80,10 @@ class MountMenu:
     def action_group(self):
         return self.__action_group
 
+    @GObject.Signal('menu-changed')
+    def menu_changed(self, menu: Gio.Menu) -> None:
+        pass
+
     def __rebuild_menu(self, *_):
         def eject_item(obj):
             return _create_item('Eject', f'eject::{id(obj)}', ['media-eject'])
@@ -115,8 +122,11 @@ class MountMenu:
             if is_toplevel and volume.can_eject():
                 menu.append_item(eject_item(volume))
 
-            section = Gio.Menu()
-            menu.append_item(menu_item(volume, section, False))
+            if is_toplevel:
+                section = menu
+            else:
+                section = Gio.Menu()
+                menu.append_item(menu_item(volume, section, False))
 
             if (mount := volume.get_mount()) is not None:
                 add_mount_items(section, mount)
@@ -127,6 +137,9 @@ class MountMenu:
         self.__action_items.clear()
 
         for drive in self.__volume_monitor.get_connected_drives():
+            if not drive.is_removable():
+                continue
+
             self.__action_items[id(drive)] = drive
             submenu = Gio.Menu()
             self.__menu.append_item(menu_item(drive, submenu))
@@ -146,12 +159,14 @@ class MountMenu:
             add_volume_items(submenu, volume, True)
 
         for mount in self.__volume_monitor.get_mounts():
-            if id(mount) in self.__action_items:
+            if mount.is_shadowed() or id(mount) in self.__action_items:
                 continue
 
             submenu = Gio.Menu()
             self.__menu.append_item(menu_item(mount, submenu))
             add_mount_items(submenu, mount, True)
+
+        self.emit('menu-changed', self.__menu)
 
     def __mount(self, _, id: GLib.Variant):
         self.__action_items[int(id.get_string())].mount_asyncio(Gio.MountMountFlags.NONE, self.__mount_operation)
@@ -163,7 +178,8 @@ class MountMenu:
         )
 
     def __open(self, _, id: GLib.Variant):
-        Gtk.show_uri(None, self.__action_items[int(id.get_string())].get_default_location().get_uri(), Gdk.CURRENT_TIME)
+        uri = self.__action_items[int(id.get_string())].get_default_location().get_uri()
+        Gtk.show_uri(None, uri, Gdk.CURRENT_TIME)
 
     def __eject(self, _, id: GLib.Variant):
         self.__action_items[int(id.get_string())].eject_with_operation_asyncio(

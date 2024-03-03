@@ -8,7 +8,7 @@
     {
       # Nixpkgs overlay providing the application
       overlay = nixpkgs.lib.composeManyExtensions [
-        poetry2nix.overlay
+        poetry2nix.overlays.default
         (final: prev: {
           # The application
           myapp = prev.poetry2nix.mkPoetryApplication {

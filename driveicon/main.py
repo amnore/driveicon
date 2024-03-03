@@ -12,7 +12,7 @@ import asyncio
 import gbulb
 from gi.repository import Gtk, Gio
 
-from .trayicon import TrayIcon
+from .trayicon import TrayIcon, SNIStatus
 from . import wrappers
 from .mountmenu import MountMenu
 
@@ -28,6 +28,15 @@ def on_activate(application: Gtk.Application):
         menu_model=application.mount_manager.menu,
         item_is_menu=True,
     )
+
+    def set_visibility(_, menu):
+        if menu.get_n_items() == 0:
+            application.tray_icon.status = SNIStatus.PASSIVE
+        else:
+            application.tray_icon.status = SNIStatus.ACTIVE
+
+    set_visibility(None, application.mount_manager.menu)
+    application.mount_manager.connect('menu-changed', set_visibility)
 
 
 def main():
