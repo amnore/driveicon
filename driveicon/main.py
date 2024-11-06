@@ -9,8 +9,8 @@ gi.require_versions({
 })
 
 import asyncio
-import gbulb
 from gi.repository import Gtk, Gio
+from gi.events import GLibEventLoopPolicy
 
 from .trayicon import TrayIcon, SNIStatus
 from . import wrappers
@@ -40,16 +40,13 @@ def on_activate(application: Gtk.Application):
 
 
 def main():
-    gbulb.install(True)
+    asyncio.set_event_loop_policy(GLibEventLoopPolicy())
     wrappers.wrap_all()
 
     app = Gtk.Application(application_id='one.markle.DriveIcon')
     app.connect('activate', on_activate)
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
     try:
-        loop.run_forever(application=app)
+        app.run()
     except KeyboardInterrupt:
         pass

@@ -1,13 +1,12 @@
 [tool.poetry]
 name = "driveicon"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["Chen Zhenge <me@markle.one>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-PyGObject = "^3.42.2"
-gbulb = "^0.6.3"
+PyGObject = "^3.50.0"
 dasbus = "^1.7"
 
 [tool.poetry.dev-dependencies]
